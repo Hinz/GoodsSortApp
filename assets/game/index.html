@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>GoodsSort</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none;}
+html,body{height:100%;background:#2a2a2a;display:flex;justify-content:center;
+  font-family:'Segoe UI',Arial,sans-serif;}
+#app{width:min(420px,100vw);height:100dvh;display:flex;flex-direction:column;
+  position:relative;overflow:hidden;}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;}
+.screen.hidden{display:none!important;}
+
+/* ROOM */
+.room{position:absolute;inset:0;z-index:0;background:#e8dcc8;pointer-events:none;}
+.room::before{content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(90deg,transparent,transparent 49px,
+  rgba(0,0,0,.025) 49px,rgba(0,0,0,.025) 50px);}
+.room::after{content:'';position:absolute;bottom:0;left:0;right:0;height:14%;
+  background:linear-gradient(180deg,#b8834a,#8a5c2a);
+  border-top:3px solid #7a4c20;}
+
+/* MENU */
+#scr-menu{align-items:center;justify-content:center;z-index:10;padding:16px;}
+#scr-menu>*:not(.room){position:relative;z-index:1;}
+.menu-card{background:rgba(255,255,255,.95);border-radius:22px;padding:24px 20px;
+  width:100%;max-width:340px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.18);}
+.logo{font-size:2.2rem;font-weight:900;
+  background:linear-gradient(120deg,#e84060,#ff9500,#f5c800);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.logo-sub{color:#999;font-size:.8rem;margin-bottom:14px;}
+.preview-strip{display:flex;gap:5px;justify-content:center;flex-wrap:wrap;margin-bottom:12px;}
+.howto{background:#f7f7f7;border-radius:12px;padding:12px;font-size:.79rem;
+  color:#666;line-height:1.7;margin-bottom:14px;text-align:left;}
+.howto b{color:#e84060;}
+.btn{border:none;border-radius:28px;font-weight:800;cursor:pointer;
+  padding:13px 32px;font-size:.95rem;width:100%;margin-bottom:8px;transition:transform .1s;}
+.btn:last-child{margin-bottom:0;}
+.btn:active{transform:scale(.93);}
+.btn-play{background:linear-gradient(135deg,#4caf50,#2e7d32);color:#fff;
+  box-shadow:0 4px 16px rgba(76,175,80,.45);animation:gpulse 2s ease-in-out infinite;}
+@keyframes gpulse{0%,100%{box-shadow:0 4px 16px rgba(76,175,80,.4);}
+  50%{box-shadow:0 4px 26px rgba(76,175,80,.7);}}
+.btn-grey{background:#e8e8e8;color:#555;}
+
+/* GAME */
+#scr-game{z-index:10;}
+
+/* HUD */
+#hud{position:relative;z-index:6;display:flex;align-items:center;
+  justify-content:space-between;padding:7px 10px 5px;
+  background:rgba(255,255,255,.92);border-bottom:1px solid rgba(0,0,0,.07);flex-shrink:0;}
+.hud-btn{width:34px;height:34px;border-radius:50%;border:none;cursor:pointer;
+  font-size:1rem;display:flex;align-items:center;justify-content:center;}
+.hud-home{background:linear-gradient(135deg,#42a5f5,#1565c0);color:#fff;
+  box-shadow:0 2px 8px rgba(21,101,192,.35);}
+.hud-group{display:flex;align-items:center;gap:8px;}
+.hud-stat{display:flex;align-items:center;gap:4px;background:#f5f5f5;
+  border-radius:20px;padding:4px 9px;font-size:.8rem;font-weight:700;color:#333;}
+.hud-stat .si{font-size:1rem;}
+.hud-timer{background:linear-gradient(135deg,#ff8f00,#e65100);color:#fff;
+  border-radius:20px;padding:4px 10px;font-size:.8rem;font-weight:800;
+  display:flex;align-items:center;gap:4px;}
+.hud-timer.urg{animation:tpulse .5s infinite alternate;}
+@keyframes tpulse{from{opacity:1;}to{opacity:.35;}}
+
+/* Progress */
+#prog-bar{height:4px;background:rgba(0,0,0,.08);flex-shrink:0;z-index:5;position:relative;}
+#prog-fill{height:100%;width:0%;background:linear-gradient(90deg,#42a5f5,#26c6da);transition:width .5s;}
+
+/* Level dots */
+#ldots{display:flex;gap:4px;justify-content:center;padding:4px 0 3px;
+  background:rgba(255,255,255,.6);flex-shrink:0;z-index:5;position:relative;}
+.ld{width:7px;height:7px;border-radius:50%;background:#ccc;transition:background .3s;}
+.ld.done{background:#4caf50;}
+.ld.active{background:#e84060;transform:scale(1.35);}
+
+/* Cabinet */
+#cab-wrap{flex:1;display:flex;align-items:center;justify-content:center;
+  padding:6px 8px 8px;z-index:2;position:relative;min-height:0;overflow:hidden;}
+#cabinet{display:flex;flex-direction:column;gap:0;width:100%;max-width:390px;
+  background:#d48060;border-radius:12px;overflow:hidden;
+  border:4px solid #b05a30;
+  box-shadow:0 6px 24px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.2);}
+
+/* Shelf row */
+.shelf-row{display:flex;gap:3px;background:#f5ede0;
+  padding:5px 5px 3px;position:relative;border-bottom:9px solid #c07040;}
+.shelf-row+.shelf-row{border-top:3px solid #b05a30;}
+
+/* Row clear flash */
+.shelf-row.row-match{background:rgba(76,175,80,.25)!important;
+  transition:background .15s;}
+
+/* Cell */
+.cell{flex:1;position:relative;display:flex;align-items:flex-end;
+  justify-content:center;cursor:pointer;border-radius:5px;
+  padding-top:10px;transition:background .12s,transform .1s;min-width:0;}
+.cell.empty-slot{cursor:pointer;}
+.cell.no-action{cursor:default;}
+.cell:active{transform:scale(.93);}
+
+/* Selected cell highlight */
+.cell.selected .prod-front .prod-card{
+  outline:3px solid #e84060;
+  box-shadow:0 0 12px rgba(232,64,96,.6),1px 2px 6px rgba(0,0,0,.2)!important;
+  transform:scale(1.08);
+}
+
+/* Drop target highlight */
+.cell.drop-target{background:rgba(76,175,80,.25);}
+.cell.drop-target::after{content:'';position:absolute;inset:4px;
+  border:2px dashed rgba(76,175,80,.7);border-radius:4px;pointer-events:none;}
+
+/* Products */
+.prod-back{position:absolute;top:0;left:50%;
+  transform:translateX(-50%) scale(.78);
+  transform-origin:top center;
+  opacity:.7;z-index:1;pointer-events:none;}
+.prod-front{position:relative;z-index:2;transition:transform .15s;}
+.prod-card{border-radius:7px;background:#fff;
+  border:1.5px solid rgba(0,0,0,.1);
+  box-shadow:1px 2px 6px rgba(0,0,0,.2);
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;flex-shrink:0;transition:transform .15s,box-shadow .15s;}
+.prod-card img{width:100%;height:100%;object-fit:contain;display:block;pointer-events:none;}
+
+/* Animations */
+.prod-card.pop{animation:ppop .35s ease-out forwards;}
+@keyframes ppop{0%{transform:scale(1);}45%{transform:scale(1.4);filter:brightness(1.9);}
+  100%{transform:scale(0);opacity:0;}}
+.prod-card.land{animation:pland .2s ease-out;}
+@keyframes pland{from{transform:scale(.2) translateY(-8px);opacity:0;}to{transform:scale(1);opacity:1;}}
+.prod-front.promoting{animation:promote .28s ease-out;}
+@keyframes promote{from{transform:translateY(-14px);opacity:.4;}to{transform:translateY(0);opacity:1;}}
+
+/* Bottom strip (reset button area) */
+#bottom-strip{position:relative;z-index:6;flex-shrink:0;
+  background:rgba(255,255,255,.88);border-top:2px solid rgba(0,0,0,.08);
+  padding:8px 12px;display:flex;justify-content:center;gap:10px;}
+.act-btn{border:none;border-radius:22px;font-weight:800;cursor:pointer;
+  padding:10px 22px;font-size:.85rem;display:flex;align-items:center;gap:6px;
+  transition:transform .1s;box-shadow:0 2px 8px rgba(0,0,0,.15);}
+.act-btn:active{transform:scale(.92);}
+.btn-reset{background:linear-gradient(135deg,#ff8f00,#e65100);color:#fff;}
+.btn-hint{background:linear-gradient(135deg,#ffd54f,#ff8f00);color:#fff;}
+.b-cnt{background:#e84060;color:#fff;border-radius:10px;font-size:.6rem;
+  font-weight:900;padding:1px 5px;min-width:16px;text-align:center;}
+
+/* WIN / LOSE */
+#scr-win,#scr-lose{align-items:center;justify-content:center;z-index:20;padding:16px;}
+#scr-win>*:not(.room),#scr-lose>*:not(.room){position:relative;z-index:1;}
+.result-card{background:rgba(255,255,255,.96);border-radius:22px;
+  padding:28px 22px;width:100%;max-width:320px;text-align:center;
+  box-shadow:0 8px 36px rgba(0,0,0,.22);
+  animation:popIn .35s cubic-bezier(.175,.885,.32,1.275);}
+@keyframes popIn{from{transform:scale(.55);opacity:0;}to{transform:scale(1);opacity:1;}}
+.res-icon{font-size:3.8rem;margin-bottom:8px;display:block;}
+.res-title{font-size:1.45rem;font-weight:900;color:#333;margin-bottom:6px;}
+.res-sub{font-size:.85rem;color:#888;margin-bottom:20px;}
+.res-stat{display:flex;justify-content:center;gap:20px;margin-bottom:18px;}
+.stat-box{text-align:center;}
+.stat-val{font-size:1.4rem;font-weight:900;color:#e84060;}
+.stat-lbl{font-size:.7rem;color:#aaa;text-transform:uppercase;letter-spacing:.06em;}
+
+/* Floater */
+.flt{position:fixed;z-index:999;font-size:1.05rem;font-weight:900;
+  pointer-events:none;animation:fltup .85s ease-out forwards;}
+@keyframes fltup{from{transform:translateY(0) translateX(-50%);opacity:1;}
+  to{transform:translateY(-64px) translateX(-50%);opacity:0;}}
+
+/* Locked overlay during animations */
+#lock-overlay{display:none;position:absolute;inset:0;z-index:50;}
+#lock-overlay.active{display:block;}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- MENU -->
+<div id="scr-menu" class="screen">
+  <div class="room"></div>
+  <div class="menu-card">
+    <div class="logo">🛒 GoodsSort</div>
+    <div class="logo-sub">Sort the shelf!</div>
+    <div class="preview-strip" id="menu-preview"></div>
+    <div class="howto">
+      <b>How to play:</b><br>
+      Products are stacked in shelf lanes.<br>
+      <b>Tap a product</b> to select it, then<br>
+      <b>tap an empty slot</b> to move it there.<br>
+      Fill a row with the <b>same product</b> to clear it!
+    </div>
+    <button class="btn btn-play" onclick="startGame(0)">▶ Play</button>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="scr-game" class="screen hidden">
+  <div class="room"></div>
+  <div id="hud">
+    <button class="hud-btn hud-home" onclick="goMenu()">🏠</button>
+    <div class="hud-group">
+      <div class="hud-stat"><span class="si">📦</span><span id="hud-moves">0</span></div>
+      <div class="hud-stat"><span class="si">⭐</span><span id="hud-stars">0</span></div>
+    </div>
+    <div class="hud-timer"><span>⏱</span><span id="hud-timer">01:30</span></div>
+  </div>
+  <div id="prog-bar"><div id="prog-fill"></div></div>
+  <div id="ldots"></div>
+  <div id="cab-wrap">
+    <div id="lock-overlay"></div>
+    <div id="cabinet"></div>
+  </div>
+  <div id="bottom-strip">
+    <button class="act-btn btn-reset" onclick="resetLevel()">↺ Reset</button>
+    <button class="act-btn btn-hint" onclick="doHint()">💡 Hint <span class="b-cnt" id="bc-hint">3</span></button>
+  </div>
+</div>
+
+<!-- WIN -->
+<div id="scr-win" class="screen hidden">
+  <div class="room"></div>
+  <div class="result-card">
+    <span class="res-icon" id="win-icon">🎉</span>
+    <div class="res-title" id="win-title">Level 1 Complete!</div>
+    <div class="res-stat">
+      <div class="stat-box"><div class="stat-val" id="win-moves">0</div><div class="stat-lbl">Moves</div></div>
+      <div class="stat-box"><div class="stat-val" id="win-time">1:30</div><div class="stat-lbl">Time Left</div></div>
+      <div class="stat-box"><div class="stat-val" id="win-stars">0</div><div class="stat-lbl">Stars</div></div>
+    </div>
+    <button class="btn btn-play" id="btn-next" onclick="onNext()">Next Level →</button>
+    <button class="btn btn-grey" onclick="startGame(G.idx)">↺ Retry</button>
+  </div>
+</div>
+
+<!-- LOSE -->
+<div id="scr-lose" class="screen hidden">
+  <div class="room"></div>
+  <div class="result-card">
+    <span class="res-icon">😓</span>
+    <div class="res-title" id="lose-title">Time's Up!</div>
+    <div class="res-sub" id="lose-sub">Keep trying!</div>
+    <button class="btn btn-play" onclick="startGame(G.idx)">↺ Try Again</button>
+    <button class="btn btn-grey" onclick="goMenu()">🏠 Menu</button>
+  </div>
+</div>
+
+</div><!-- #app -->
+
+<script>
+/* ═══════════════════════════════════════
+   PRODUCTS
+═══════════════════════════════════════ */
+const PRODS = {
+  1:'BH-38_700ml-medium.png',
+  2:'MP0600-1-medium.png',
+  3:'flash-1750-.webp',
+  4:'flash-gel-label-green.webp',
+  5:'rush-limescale-750ml.webp',
+  6:'spartan_logo-3.webp',
+  7:'MP0610-1-medium.png',
+  8:'easy-BC-1.webp',
+  9:'manix-900x900-01-medium.png',
+  10:'plus5-1L-low-1.webp',
+};
+
+/* ═══════════════════════════════════════
+   LEVELS
+═══════════════════════════════════════ */
+// Rule: types = rows-1  →  types×cols fronts fill (rows-1) rows, 1 row stays empty as buffer
+// depth=2 adds a back to every filled cell (second wave after first round clears)
+const LEVELS = [
+  {rows:3,cols:3,types:2,depth:1,timer:120},  // L1  6 fronts, 3 empty
+  {rows:3,cols:4,types:2,depth:1,timer:110},  // L2  8 fronts, 4 empty
+  {rows:4,cols:3,types:3,depth:1,timer:100},  // L3  9 fronts, 3 empty
+  {rows:4,cols:4,types:3,depth:1,timer:90},   // L4 12 fronts, 4 empty
+  {rows:4,cols:3,types:3,depth:2,timer:90},   // L5  9 fronts+backs, 3 empty
+  {rows:4,cols:4,types:3,depth:2,timer:80},   // L6 12 fronts+backs, 4 empty
+  {rows:5,cols:4,types:4,depth:1,timer:80},   // L7 16 fronts, 4 empty
+  {rows:5,cols:4,types:4,depth:2,timer:70},   // L8 16 fronts+backs, 4 empty
+  {rows:5,cols:5,types:4,depth:1,timer:70},   // L9 20 fronts, 5 empty
+  {rows:5,cols:5,types:4,depth:2,timer:60},   // L10 20 fronts+backs, 5 empty
+];
+
+/* ═══════════════════════════════════════
+   PHASE ENUMS
+═══════════════════════════════════════ */
+const LanePhase  = { idle:'idle', promoting:'promoting' };
+const BoardPhase = {
+  idle:'idle', animatingMove:'animatingMove',
+  promoting:'promoting', checkingMatches:'checkingMatches',
+  clearing:'clearing', resolving:'resolving', won:'won', lost:'lost'
+};
+
+/* ═══════════════════════════════════════
+   GAME STATE  G
+═══════════════════════════════════════ */
+let G = {};
+
+/* ═══════════════════════════════════════
+   GRID GENERATION
+   grid[r][c] = { front: type|null, back: type|null, phase: LanePhase }
+═══════════════════════════════════════ */
+function generateGrid(rows, cols, types, depth) {
+  // types × cols filled lanes; the remaining (rows-types) × cols lanes stay empty (buffer)
+  const filledCount = types * cols;
+  const totalCells  = rows * cols;
+
+  // Front pool: each type exactly cols times
+  const frontPool = [];
+  for (let t = 1; t <= types; t++)
+    for (let k = 0; k < cols; k++) frontPool.push(t);
+  shuffle(frontPool);
+
+  // Back pool for depth-2 levels (same distribution, different shuffle)
+  let backPool = null;
+  if (depth === 2) {
+    backPool = [];
+    for (let t = 1; t <= types; t++)
+      for (let k = 0; k < cols; k++) backPool.push(t);
+    shuffle(backPool);
+  }
+
+  // Build cell list: filled first, then empties, then shuffle
+  const cells = [];
+  for (let i = 0; i < filledCount; i++) {
+    cells.push({ front: frontPool[i], back: depth === 2 ? backPool[i] : null, phase: LanePhase.idle });
+  }
+  for (let i = filledCount; i < totalCells; i++) {
+    cells.push({ front: null, back: null, phase: LanePhase.idle });
+  }
+  shuffle(cells);
+
+  const grid = [];
+  for (let r = 0; r < rows; r++) {
+    grid.push(cells.slice(r * cols, (r + 1) * cols));
+  }
+  return grid;
+}
+
+/* ═══════════════════════════════════════
+   LANE HELPERS
+═══════════════════════════════════════ */
+function canPick(lane)        { return lane.front !== null && lane.phase === LanePhase.idle; }
+function canReceiveDrop(lane) { return lane.front === null && lane.phase === LanePhase.idle; }
+function shouldPromote(lane)  { return lane.front === null && lane.back !== null && lane.phase === LanePhase.idle; }
+
+/* ═══════════════════════════════════════
+   BOARD QUERIES
+═══════════════════════════════════════ */
+function isRowMatched(row) {
+  const first = row[0].front;
+  if (first === null) return false;
+  return row.every(lane => lane.front === first);
+}
+
+function isBoardCleared() {
+  return G.grid.every(row => row.every(lane => lane.front === null && lane.back === null));
+}
+
+function hasLegalMoves() {
+  // Any front product can move to any empty front slot
+  let hasSrc = false, hasDst = false;
+  for (const row of G.grid) {
+    for (const lane of row) {
+      if (canPick(lane))        hasSrc = true;
+      if (canReceiveDrop(lane)) hasDst = true;
+      if (hasSrc && hasDst) return true;
+    }
+  }
+  return false;
+}
+
+/* ═══════════════════════════════════════
+   MOVE
+═══════════════════════════════════════ */
+function tryMoveFront(srcRow, srcCol, dstRow, dstCol) {
+  if (G.boardPhase !== BoardPhase.idle) return false;
+  if (srcRow === dstRow && srcCol === dstCol) return false;
+  const src = G.grid[srcRow][srcCol];
+  const dst = G.grid[dstRow][dstCol];
+  if (!canPick(src))        return false;
+  if (!canReceiveDrop(dst)) return false;
+
+  dst.front = src.front;
+  src.front = null;
+  G.moves++;
+  G.stars = Math.max(0, G.stars - 1); // small penalty per move; clears give big bonus
+  return true;
+}
+
+/* ═══════════════════════════════════════
+   RESOLUTION LOOP  (async, drives animations)
+═══════════════════════════════════════ */
+async function resolveBoard() {
+  G.boardPhase = BoardPhase.resolving;
+  lockBoard(true);
+
+  let changed = true;
+  while (changed) {
+    changed = false;
+
+    // 1. Promote all lanes that need it
+    const toPromote = [];
+    for (let r = 0; r < G.rows; r++) {
+      for (let c = 0; c < G.cols; c++) {
+        if (shouldPromote(G.grid[r][c])) toPromote.push([r, c]);
+      }
+    }
+    if (toPromote.length > 0) {
+      toPromote.forEach(([r,c]) => { G.grid[r][c].phase = LanePhase.promoting; });
+      renderGrid();
+      await delay(280);
+      toPromote.forEach(([r,c]) => {
+        const lane = G.grid[r][c];
+        lane.front = lane.back;
+        lane.back  = null;
+        lane.phase = LanePhase.idle;
+      });
+      renderGrid();
+      changed = true;
+    }
+
+    // 2. Check for matched rows
+    const matchedRows = [];
+    for (let r = 0; r < G.rows; r++) {
+      if (isRowMatched(G.grid[r])) matchedRows.push(r);
+    }
+    if (matchedRows.length > 0) {
+      // Flash matched rows
+      matchedRows.forEach(r => {
+        const rowEl = document.querySelectorAll('.shelf-row')[r];
+        if (rowEl) rowEl.classList.add('row-match');
+      });
+      // Animate pop on front cards
+      animPopRows(matchedRows);
+      await delay(400);
+
+      // Clear fronts, trigger promotions for backs
+      matchedRows.forEach(r => {
+        G.grid[r].forEach(lane => { lane.front = null; });
+        const rowEl = document.querySelectorAll('.shelf-row')[r];
+        if (rowEl) rowEl.classList.remove('row-match');
+        G.rowsCleared++;
+        G.stars += 50 + Math.floor(G.timer / 5);
+        spawnFloater('+' + (50 + Math.floor(G.timer / 5)));
+      });
+      renderGrid();
+      updateProgress();
+      changed = true;
+    }
+  }
+
+  // Check win/lose
+  if (isBoardCleared()) {
+    G.boardPhase = BoardPhase.won;
+    lockBoard(false);
+    triggerWin();
+  } else if (!hasLegalMoves()) {
+    G.boardPhase = BoardPhase.lost;
+    lockBoard(false);
+    doLose('No Moves Left!', 'Rearrange to find matches!');
+  } else {
+    G.boardPhase = BoardPhase.idle;
+    lockBoard(false);
+    renderGrid();
+  }
+}
+
+function animPopRows(rowIndices) {
+  const rowEls = document.querySelectorAll('.shelf-row');
+  rowIndices.forEach(r => {
+    if (!rowEls[r]) return;
+    rowEls[r].querySelectorAll('.prod-front .prod-card').forEach(card => {
+      card.classList.add('pop');
+    });
+  });
+}
+
+/* ═══════════════════════════════════════
+   INIT LEVEL
+═══════════════════════════════════════ */
+function initLevel(idx) {
+  const lv = LEVELS[idx];
+  if (G.ivl) clearInterval(G.ivl);
+  const depth = lv.depth || 1;
+  G = {
+    idx,
+    rows:            lv.rows,
+    cols:            lv.cols,
+    types:           lv.types,
+    depth,
+    maxTimer:        lv.timer,
+    timer:           lv.timer,
+    grid:            generateGrid(lv.rows, lv.cols, lv.types, depth),
+    boardPhase:      BoardPhase.idle,
+    selected:        null,
+    moves:           0,
+    rowsCleared:     0,
+    totalRowsToClear: lv.types * depth,  // each type clears once per depth wave
+    stars:           100,
+    hintCount:       3,
+    running:         false,
+    dead:            false,
+    ivl:             null,
+  };
+
+  renderDots();
+  renderGrid();
+  renderHUD();
+  updateProgress();
+  showScreen('scr-game');
+  setTimeout(() => spawnFloater('Level ' + (idx+1)), 100);
+  postMsg({ type:'LEVEL_START', level: idx+1 });
+}
+
+/* ═══════════════════════════════════════
+   CELL CLICK HANDLER
+═══════════════════════════════════════ */
+function onCellClick(r, c) {
+  if (G.dead || G.boardPhase !== BoardPhase.idle) return;
+
+  const lane = G.grid[r][c];
+
+  if (G.selected === null) {
+    // Nothing selected: select this cell if it has a front product
+    if (canPick(lane)) {
+      G.selected = { row: r, col: c };
+      if (!G.running) startTimer();
+      renderGrid();
+    }
+    return;
+  }
+
+  const { row: sr, col: sc } = G.selected;
+
+  if (sr === r && sc === c) {
+    // Deselect same cell
+    G.selected = null;
+    renderGrid();
+    return;
+  }
+
+  // Try to move selected → clicked
+  if (canReceiveDrop(lane)) {
+    G.selected = null;
+    if (tryMoveFront(sr, sc, r, c)) {
+      renderGrid();
+      renderHUD();
+      // Run resolution after a brief move animation
+      setTimeout(() => resolveBoard(), 120);
+    }
+    return;
+  }
+
+  // Clicked another cell with a product: re-select it
+  if (canPick(lane)) {
+    G.selected = { row: r, col: c };
+    renderGrid();
+    return;
+  }
+
+  // Clicked something neither pickable nor droppable: deselect
+  G.selected = null;
+  renderGrid();
+}
+
+/* ═══════════════════════════════════════
+   RENDER
+═══════════════════════════════════════ */
+function renderHUD() {
+  document.getElementById('hud-moves').textContent = G.moves;
+  document.getElementById('hud-stars').textContent = Math.max(0, G.stars);
+  document.getElementById('hud-timer').textContent = fmt(G.timer);
+  const tv = document.getElementById('hud-timer').parentElement;
+  tv.className = 'hud-timer' + (G.timer <= 10 ? ' urg' : '');
+  document.getElementById('bc-hint').textContent = G.hintCount;
+}
+
+function renderGrid() {
+  const cab = document.getElementById('cabinet');
+  cab.innerHTML = '';
+
+  const appW    = document.getElementById('app').offsetWidth || 380;
+  const cabInner = Math.min(appW - 20, 382) - 10 - (G.cols - 1) * 3;
+  const cardW   = Math.floor(Math.min(cabInner / G.cols, 68));
+  const cardH   = Math.floor(cardW * 1.45);
+  const backPeek = Math.floor(cardH * 0.28);
+
+  for (let r = 0; r < G.rows; r++) {
+    const rowEl = document.createElement('div');
+    rowEl.className = 'shelf-row';
+
+    for (let c = 0; c < G.cols; c++) {
+      const lane   = G.grid[r][c];
+      const isSel  = G.selected && G.selected.row === r && G.selected.col === c;
+      const isDrop = G.selected && canReceiveDrop(lane);
+      const promoting = lane.phase === LanePhase.promoting;
+      const hasBack = lane.back !== null;
+      const hasFront = lane.front !== null;
+
+      const cellEl = document.createElement('div');
+      let cls = 'cell';
+      if (isSel)  cls += ' selected';
+      if (isDrop) cls += ' drop-target';
+      if (!hasFront && !isDrop) cls += ' no-action';
+      cellEl.className = cls;
+      cellEl.style.paddingTop = (hasBack ? backPeek : 0) + 'px';
+      cellEl.style.height = (cardH + (hasBack ? backPeek : 0) + 8) + 'px';
+
+      // Back item peek
+      if (hasBack) {
+        const backWrap = document.createElement('div');
+        backWrap.className = 'prod-back';
+        backWrap.style.top = '0px';
+        backWrap.appendChild(makeCard(lane.back, cardW, cardH));
+        cellEl.appendChild(backWrap);
+      }
+
+      // Front item
+      if (hasFront) {
+        const frontWrap = document.createElement('div');
+        frontWrap.className = 'prod-front' + (promoting ? ' promoting' : '');
+        frontWrap.appendChild(makeCard(lane.front, cardW, cardH));
+        cellEl.appendChild(frontWrap);
+      } else if (!isDrop) {
+        // Empty placeholder (no drop target)
+        const ph = document.createElement('div');
+        ph.className = 'prod-card';
+        ph.style.cssText = `width:${cardW}px;height:${cardH}px;background:rgba(0,0,0,.06);border:2px dashed rgba(180,140,100,.3);`;
+        cellEl.appendChild(ph);
+      } else {
+        // Drop target empty
+        const ph = document.createElement('div');
+        ph.className = 'prod-card';
+        ph.style.cssText = `width:${cardW}px;height:${cardH}px;background:rgba(76,175,80,.08);border:none;`;
+        cellEl.appendChild(ph);
+      }
+
+      cellEl.addEventListener('click', () => onCellClick(r, c));
+      rowEl.appendChild(cellEl);
+    }
+    cab.appendChild(rowEl);
+  }
+}
+
+function makeCard(type, w, h) {
+  const card = document.createElement('div');
+  card.className = 'prod-card';
+  card.style.width  = w + 'px';
+  card.style.height = h + 'px';
+  const img = document.createElement('img');
+  img.src = 'images/' + PRODS[type];
+  img.alt = 'product ' + type;
+  card.appendChild(img);
+  return card;
+}
+
+function renderDots() {
+  const wrap = document.getElementById('ldots');
+  wrap.innerHTML = '';
+  LEVELS.forEach((_, i) => {
+    const d = document.createElement('span');
+    d.className = 'ld' + (i < G.idx ? ' done' : i === G.idx ? ' active' : '');
+    wrap.appendChild(d);
+  });
+}
+
+function updateProgress() {
+  const pct = G.totalRowsToClear > 0 ? (G.rowsCleared / G.totalRowsToClear * 100) : 0;
+  document.getElementById('prog-fill').style.width = pct + '%';
+}
+
+function lockBoard(on) {
+  document.getElementById('lock-overlay').className = on ? 'active' : '';
+}
+
+/* ═══════════════════════════════════════
+   TIMER
+═══════════════════════════════════════ */
+function startTimer() {
+  G.running = true;
+  G.ivl = setInterval(() => {
+    if (G.dead) return;
+    G.timer = Math.max(0, G.timer - 1);
+    renderHUD();
+    if (G.timer <= 0) { stopTimer(); doLose(); }
+  }, 1000);
+}
+function stopTimer() { G.running = false; clearInterval(G.ivl); G.ivl = null; }
+
+/* ═══════════════════════════════════════
+   WIN / LOSE
+═══════════════════════════════════════ */
+function triggerWin() {
+  G.dead = true;
+  stopTimer();
+  const stars = Math.max(1, G.stars + Math.floor(G.timer * 2));
+  postMsg({ type:'LEVEL_COMPLETE', level: G.idx+1, moves: G.moves, stars, timeLeft: G.timer });
+  if (G.idx === LEVELS.length - 1) postMsg({ type:'GAME_COMPLETE', stars });
+  setTimeout(() => {
+    document.getElementById('win-icon').textContent  = G.idx === LEVELS.length - 1 ? '🏆' : '🎉';
+    document.getElementById('win-title').textContent = G.idx === LEVELS.length - 1 ? 'You finished all levels!' : 'Level ' + (G.idx+1) + ' Complete!';
+    document.getElementById('win-moves').textContent = G.moves;
+    document.getElementById('win-time').textContent  = fmt(G.timer);
+    document.getElementById('win-stars').textContent = stars;
+    document.getElementById('btn-next').textContent  = G.idx >= LEVELS.length - 1 ? '🏠 Menu' : 'Next Level →';
+    showScreen('scr-win');
+  }, 600);
+}
+
+function doLose(title = "Time's Up!", sub = 'Keep trying!') {
+  if (G.dead) return;
+  G.dead = true;
+  stopTimer();
+  postMsg({ type:'LEVEL_FAILED', level: G.idx+1 });
+  setTimeout(() => {
+    document.getElementById('lose-title').textContent = title;
+    document.getElementById('lose-sub').textContent   = sub;
+    showScreen('scr-lose');
+  }, 500);
+}
+
+/* ═══════════════════════════════════════
+   HINT
+═══════════════════════════════════════ */
+function doHint() {
+  if (G.hintCount <= 0 || G.boardPhase !== BoardPhase.idle || G.dead) return;
+  // Find a src cell whose type matches another front cell in the same row
+  for (let r = 0; r < G.rows; r++) {
+    const fronts = G.grid[r].map(l => l.front);
+    const counts = {};
+    fronts.forEach(t => { if (t !== null) counts[t] = (counts[t]||0)+1; });
+    // Most common type in this row
+    let bestType = null, bestCount = 0;
+    for (const [t, n] of Object.entries(counts)) {
+      if (n > bestCount) { bestCount = n; bestType = parseInt(t); }
+    }
+    if (bestType && bestCount < G.cols) {
+      // Highlight cells of bestType in this row
+      const rowEls = document.querySelectorAll('.shelf-row');
+      if (rowEls[r]) {
+        rowEls[r].querySelectorAll('.cell').forEach((cel, c) => {
+          if (G.grid[r][c].front === bestType) {
+            cel.style.transition = 'background .1s';
+            cel.style.background = 'rgba(255,220,50,.55)';
+            setTimeout(() => cel.style.background = '', 1200);
+          }
+        });
+      }
+      G.hintCount--;
+      renderHUD();
+      return;
+    }
+  }
+  // Fallback: highlight any pickable cell
+  for (let r = 0; r < G.rows; r++) {
+    for (let c = 0; c < G.cols; c++) {
+      if (canPick(G.grid[r][c])) {
+        const rowEls = document.querySelectorAll('.shelf-row');
+        if (rowEls[r]) {
+          const cells = rowEls[r].querySelectorAll('.cell');
+          if (cells[c]) {
+            cells[c].style.background = 'rgba(255,220,50,.5)';
+            setTimeout(() => cells[c].style.background = '', 1200);
+          }
+        }
+        G.hintCount--;
+        renderHUD();
+        return;
+      }
+    }
+  }
+}
+
+/* ═══════════════════════════════════════
+   RESET LEVEL
+═══════════════════════════════════════ */
+function resetLevel() {
+  stopTimer();
+  initLevel(G.idx);
+}
+
+/* ═══════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════ */
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+function fmt(s) {
+  const m = Math.floor(s / 60), sec = s % 60;
+  return (m < 10 ? '0' : '') + m + ':' + (sec < 10 ? '0' : '') + sec;
+}
+function delay(ms) { return new Promise(res => setTimeout(res, ms)); }
+function spawnFloater(txt) {
+  const x = window.innerWidth / 2, y = window.innerHeight * 0.72;
+  const el = document.createElement('div');
+  el.className = 'flt'; el.textContent = txt;
+  el.style.cssText += `left:${x}px;top:${y}px;color:#ffc107;font-size:1.1rem;`;
+  document.body.appendChild(el);
+  el.addEventListener('animationend', () => el.remove(), { once: true });
+}
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
+function postMsg(data) {
+  try { window.parent?.postMessage(data, '*'); } catch(e) {}
+}
+
+/* ═══════════════════════════════════════
+   NAVIGATION
+═══════════════════════════════════════ */
+function startGame(idx) {
+  initLevel(Math.max(0, Math.min(LEVELS.length - 1, idx)));
+}
+function onNext() {
+  if (G.idx >= LEVELS.length - 1) { goMenu(); return; }
+  startGame(G.idx + 1);
+}
+function goMenu() {
+  if (G.ivl) stopTimer();
+  G.dead = true;
+  showScreen('scr-menu');
+}
+
+/* ═══════════════════════════════════════
+   MOBILE API
+═══════════════════════════════════════ */
+window.addEventListener('message', e => {
+  if (e.data?.type === 'GO_TO_LEVEL') startGame(e.data.level - 1);
+  if (e.data?.type === 'RESET') startGame(G.idx);
+});
+
+/* ═══════════════════════════════════════
+   MENU PREVIEW
+═══════════════════════════════════════ */
+(function() {
+  const wrap = document.getElementById('menu-preview');
+  Object.values(PRODS).slice(0, 8).forEach(img => {
+    const card = document.createElement('div');
+    card.className = 'prod-card';
+    card.style.cssText = 'width:40px;height:56px;flex-shrink:0;';
+    const i = document.createElement('img');
+    i.src = 'images/' + img;
+    card.appendChild(i);
+    wrap.appendChild(card);
+  });
+})();
+</script>
+</body>
+</html>
